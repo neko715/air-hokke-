@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>air Hockey</title>
+    <title>P2P Air Hockey</title>
     <script>
         let localConnection, remoteConnection, sendChannel, receiveChannel;
         let gameStarted = false;
@@ -100,7 +100,7 @@
 
             if (puck.x - puck.radius < 0) {
                 puck.visible = false; // 左端に当たったら非表示
-                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy, visible: true }));
+                sendChannel.send(JSON.stringify({ x: canvas.width, y: puck.y, vx: -puck.vx, vy: puck.vy, visible: true }));
             }
             if (puck.x + puck.radius > canvas.width) {
                 puck.visible = true; // 右端に当たったら表示
