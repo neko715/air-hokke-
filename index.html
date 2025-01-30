@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Air Hockey</title>
+    <title>air Hockey</title>
     <script>
         let localConnection, remoteConnection, sendChannel, receiveChannel;
         let gameStarted = false;
@@ -17,7 +17,7 @@
 
             sendChannel.onopen = () => {
                 isHost = true;
-                puck.visible = false; // ホストの球を非表示
+                puck.visible = true; // ホスト側で最初にパックを表示
                 startGame();
             };
             sendChannel.onmessage = handleMessage;
@@ -46,7 +46,7 @@
                 receiveChannel.onmessage = handleMessage;
                 receiveChannel.onopen = () => {
                     isHost = false;
-                    puck.visible = true; // ゲストの球を表示
+                    puck.visible = false; // ゲストは最初非表示
                     startGame();
                 };
             };
@@ -99,10 +99,11 @@
             puck.y += puck.vy;
 
             if (puck.x - puck.radius < 0) {
-                puck.visible = false; // 壁に当たったら自分の球を非表示に
+                puck.visible = false; // 左端に当たったら非表示
+                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy, visible: true }));
             }
             if (puck.x + puck.radius > canvas.width) {
-                puck.visible = true; // 相手の球を表示
+                puck.visible = true; // 右端に当たったら表示
             }
             if (puck.y - puck.radius < 0 || puck.y + puck.radius > canvas.height) {
                 puck.vy *= -1;
