@@ -3,23 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Hockey</title>
+    <title>P2P Air Hockey</title>
     <script>
         let localConnection, remoteConnection, sendChannel, receiveChannel;
         let gameStarted = false;
-        let isHost = false;
-        let puck = { x: 300, y: 200, vx: 6, vy: 6, radius: 10, visible: false };
+        let puck = { x: 300, y: 200, vx: 6, vy: 6, radius: 10 };
+        let paddle = { x: 100, y: 200, width: 20, height: 100 };
         let controls;
 
         function createRoom() {
             localConnection = new RTCPeerConnection();
             sendChannel = localConnection.createDataChannel("sendData");
 
-            sendChannel.onopen = () => {
-                isHost = true;
-                puck.visible = true;
-                startGame();
-            };
+            sendChannel.onopen = startGame;
             sendChannel.onmessage = handleMessage;
 
             localConnection.onicecandidate = e => {
@@ -44,11 +40,7 @@
             remoteConnection.ondatachannel = e => {
                 receiveChannel = e.channel;
                 receiveChannel.onmessage = handleMessage;
-                receiveChannel.onopen = () => {
-                    isHost = false;
-                    puck.visible = false;
-                    startGame();
-                };
+                receiveChannel.onopen = startGame;
             };
 
             let offer = JSON.parse(document.getElementById("offerInput").value);
@@ -69,9 +61,6 @@
             let data = JSON.parse(event.data);
             puck.x = data.x;
             puck.y = data.y;
-            puck.vx = data.vx;
-            puck.vy = data.vy;
-            puck.visible = data.visible;
         }
 
         function startGame() {
@@ -88,27 +77,16 @@
             movePuck();
             drawGame();
             if (sendChannel && sendChannel.readyState === "open") {
-                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy, visible: puck.visible }));
+                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y }));
             }
             requestAnimationFrame(updateGame);
         }
 
         function movePuck() {
-            if (!puck.visible) return;
             puck.x += puck.vx;
             puck.y += puck.vy;
-
-            if (puck.x - puck.radius < 0) {
-                puck.visible = false;
-                sendChannel.send(JSON.stringify({ x: canvas.width, y: puck.y, vx: -puck.vx, vy: puck.vy, visible: true }));
-            }
-            if (puck.x + puck.radius > canvas.width) {
-                puck.visible = true;
-                puck.x = canvas.width - puck.radius;
-            }
-            if (puck.y - puck.radius < 0 || puck.y + puck.radius > canvas.height) {
-                puck.vy *= -1;
-            }
+            if (puck.x - puck.radius < 0 || puck.x + puck.radius > canvas.width) puck.vx *= -1;
+            if (puck.y - puck.radius < 0 || puck.y + puck.radius > canvas.height) puck.vy *= -1;
         }
     </script>
     <style>
@@ -161,12 +139,10 @@
 
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (puck.visible) {
-                ctx.fillStyle = "white";
-                ctx.beginPath();
-                ctx.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
+            ctx.fill();
         }
     </script>
 </body>
