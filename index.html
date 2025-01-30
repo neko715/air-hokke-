@@ -7,8 +7,9 @@
     <script>
         let localConnection, remoteConnection, sendChannel, receiveChannel;
         let gameStarted = false;
-        let puck = { x: 300, y: 200, vx: 2, vy: 2, radius: 10 };
+        let puck = { x: 300, y: 200, vx: 6, vy: 6, radius: 10 };
         let paddle = { x: 100, y: 200, width: 20, height: 100 };
+        let controls;
 
         function createRoom() {
             localConnection = new RTCPeerConnection();
@@ -66,6 +67,8 @@
             if (!gameStarted) {
                 gameStarted = true;
                 document.getElementById("connectionStatus").innerText = "ゲーム開始！";
+                controls = document.querySelector(".controls");
+                controls.style.display = "none";
                 requestAnimationFrame(updateGame);
             }
         }
