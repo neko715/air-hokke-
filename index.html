@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P Air Hockey</title>
+    <script>
+        let localConnection, remoteConnection, sendChannel, receiveChannel;
+        let gameStarted = false;
+        let puck = { x: 300, y: 200, vx: 2, vy: 2, radius: 10 };
+        let paddle = { x: 100, y: 200, width: 20, height: 100 };
+
+        function createRoom() {
+            localConnection = new RTCPeerConnection();
+            sendChannel = localConnection.createDataChannel("sendData");
+
+            sendChannel.onopen = startGame;
+            sendChannel.onmessage = handleMessage;
+
+            localConnection.onicecandidate = e => {
+                if (e.candidate) {
+                    document.getElementById("offerOutput").value = JSON.stringify(localConnection.localDescription);
+                }
+            };
+
+            localConnection.createOffer().then(offer => {
+                localConnection.setLocalDescription(offer);
+            });
+        }
+
+        function joinRoom() {
+            remoteConnection = new RTCPeerConnection();
+            remoteConnection.onicecandidate = e => {
+                if (e.candidate) {
+                    document.getElementById("answerOutput").value = JSON.stringify(remoteConnection.localDescription);
+                }
+            };
+
+            remoteConnection.ondatachannel = e => {
+                receiveChannel = e.channel;
+                receiveChannel.onmessage = handleMessage;
+                receiveChannel.onopen = startGame;
+            };
+
+            let offer = JSON.parse(document.getElementById("offerInput").value);
+            remoteConnection.setRemoteDescription(offer).then(() => {
+                return remoteConnection.createAnswer();
+            }).then(answer => {
+                remoteConnection.setLocalDescription(answer);
+                document.getElementById("answerOutput").value = JSON.stringify(answer);
+            });
+        }
+
+        function setAnswer() {
+            let answer = JSON.parse(document.getElementById("answerInput").value);
+            localConnection.setRemoteDescription(answer);
+        }
+
+        function handleMessage(event) {
+            let data = JSON.parse(event.data);
+            puck.x = data.x;
+            puck.y = data.y;
+        }
+
+        function startGame() {
+            if (!gameStarted) {
+                gameStarted = true;
+                document.getElementById("connectionStatus").innerText = "ゲーム開始！";
+                requestAnimationFrame(updateGame);
+            }
+        }
+
+        function updateGame() {
+            movePuck();
+            drawGame();
+            if (sendChannel && sendChannel.readyState === "open") {
+                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y }));
+            }
+            requestAnimationFrame(updateGame);
+        }
+
+        function movePuck() {
+            puck.x += puck.vx;
+            puck.y += puck.vy;
+            if (puck.x - puck.radius < 0 || puck.x + puck.radius > canvas.width) puck.vx *= -1;
+            if (puck.y - puck.radius < 0 || puck.y + puck.radius > canvas.height) puck.vy *= -1;
+        }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            text-align: center;
+            color: white;
+        }
+        canvas {
+            display: block;
+        }
+        .controls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #connectionStatus {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button onclick="createRoom()">部屋を作る</button>
+        <button onclick="joinRoom()">部屋に入る</button>
+        <br><br>
+        <textarea id="offerOutput" placeholder="作成された部屋の情報" rows="3" cols="40"></textarea>
+        <br>
+        <textarea id="offerInput" placeholder="部屋に入るための情報を入力" rows="3" cols="40"></textarea>
+        <br>
+        <button onclick="setAnswer()">接続する</button>
+        <br>
+        <textarea id="answerOutput" placeholder="接続情報を送信" rows="3" cols="40"></textarea>
+        <br>
+        <textarea id="answerInput" placeholder="接続情報を入力" rows="3" cols="40"></textarea>
+        <br>
+        <div id="connectionStatus">未接続</div>
+    </div>
+    <canvas id="hockeyCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById("hockeyCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "white";
+            ctx.beginPath();
+            ctx.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    </script>
+</body>
+</html>
