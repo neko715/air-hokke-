@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> Air Hockey</title>
+    <title>P2P Air Hockey</title>
     <script>
         let localConnection, remoteConnection, sendChannel, receiveChannel;
         let gameStarted = false;
@@ -69,6 +69,8 @@
             let data = JSON.parse(event.data);
             puck.x = data.x;
             puck.y = data.y;
+            puck.vx = data.vx;
+            puck.vy = data.vy;
             puck.visible = data.visible;
         }
 
@@ -86,7 +88,7 @@
             movePuck();
             drawGame();
             if (sendChannel && sendChannel.readyState === "open") {
-                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y, visible: puck.visible }));
+                sendChannel.send(JSON.stringify({ x: puck.x, y: puck.y, vx: puck.vx, vy: puck.vy, visible: puck.visible }));
             }
             requestAnimationFrame(updateGame);
         }
@@ -95,11 +97,12 @@
             if (!puck.visible) return;
             puck.x += puck.vx;
             puck.y += puck.vy;
+
             if (puck.x - puck.radius < 0) {
-                puck.visible = !puck.visible;
+                puck.visible = false; // 壁に当たったら自分の球を非表示に
             }
             if (puck.x + puck.radius > canvas.width) {
-                puck.vx *= -1;
+                puck.visible = true; // 相手の球を表示
             }
             if (puck.y - puck.radius < 0 || puck.y + puck.radius > canvas.height) {
                 puck.vy *= -1;
